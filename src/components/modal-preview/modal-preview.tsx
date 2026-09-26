@@ -30,7 +30,8 @@ export const PreviewImage = ({ img, nameFile, closedModal, moveArrowOriginal }: 
                     <img
                         onClick={() => { }}
                         src={img}
-                        alt="" className="text-center h-full border-white border"
+                        alt=""
+                        className="text-center h-full border-white border"
                         onKeyDown={() => {
                             console.log('onKeyDown')
                         }}
