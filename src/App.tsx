@@ -1,19 +1,32 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { v4 as uuidv4 } from 'uuid';
 
 import { type IImage } from './smock/test'
-import { CardImage } from './components/card-image'
-import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import { ImageColumn } from './components/image-column'
+import { DragDropContext, type DraggableLocation, type DropResult } from '@hello-pangea/dnd';
 import { exportFile } from './utils/zip';
 import { PreviewImage } from './components/modal-preview/modal-preview';
 
+type ListKey = 'ORIGINAL' | 'PUBLIC' | 'ELIMINAR'
+
 export function App() {
-  const [namePack, setNamePack] = useState<string>('')
+  // El input para editar el nombre del pack está deshabilitado (ver JSX más abajo),
+  // así que por ahora no hace falta el setter.
+  const [namePack] = useState<string>('')
   const [imagesOriginal, setImageOriginal] = useState<IImage[]>([])
   const [imagesPublic, setImagePublic] = useState<IImage[]>([])
-  const [openModalOriginal, setOpenModalOriginal] = useState<boolean>(false)
-  const [openModalPublic, setOpenModalPublic] = useState<boolean>(false)
+  const [imagesEliminar, setImageEliminar] = useState<IImage[]>([])
+  const [previewList, setPreviewList] = useState<ListKey | null>(null)
   const [preview, setPreview] = useState<number>(0)
+
+  // Las tres listas comparten la misma funcionalidad (drag & drop entre ellas,
+  // reordenar, previsualizar), así que se accede a cada una por su droppableId
+  // en vez de repetir la lógica de mover/previsualizar por cada combinación de listas.
+  const listsByKey: Record<ListKey, [IImage[], Dispatch<SetStateAction<IImage[]>>]> = {
+    ORIGINAL: [imagesOriginal, setImageOriginal],
+    PUBLIC: [imagesPublic, setImagePublic],
+    ELIMINAR: [imagesEliminar, setImageEliminar],
+  }
 
   const onChangeImages = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -50,11 +63,9 @@ export function App() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [imagesOriginal, imagesPublic])
+  }, [imagesOriginal, imagesPublic, imagesEliminar])
 
-
-
-  const onDragEnd = (result) => {
+  const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     console.log('onDragEnd', result)
 
@@ -64,27 +75,20 @@ export function App() {
     console.log('source', source.droppableId)
     console.log('destination', destination.droppableId)
 
-    if (source.droppableId == 'ORIGINAL' && destination.droppableId == 'ORIGINAL') {
-      console.log('ORIGINAL move')
-      setImageOriginal(order(result, imagesOriginal))
-    }
-    if (source.droppableId == 'PUBLIC' && destination.droppableId == 'PUBLIC') {
-      console.log('PUBLIC move')
-      setImagePublic(order(result, imagesPublic))
-    }
-    if (source.droppableId == 'ORIGINAL' && destination.droppableId == 'PUBLIC') {
-      console.log('copiar de ORIGINAL a PUBLIC')
+    const sourceKey = source.droppableId as ListKey
+    const destKey = destination.droppableId as ListKey
 
-      moveOriginalToPublic(source, destination)
-    }
-    if (source.droppableId == 'PUBLIC' && destination.droppableId == 'ORIGINAL') {
-      console.log('copiar de PUBLIC a ORIGINAL')
-      movePublicToOriginal(source, destination)
+    if (sourceKey === destKey) {
+      const [list, setList] = listsByKey[sourceKey]
+      setList(order(result, list))
+      return
     }
 
+    console.log(`mover de ${sourceKey} a ${destKey}`)
+    moveBetweenLists(sourceKey, destKey, source, destination)
   };
 
-  const order = (result: any, images: IImage[]) => {
+  const order = (result: DropResult, images: IImage[]) => {
     const newItems = Array.from(images);
     const [reorderedItem] = newItems.splice(result.source.index, 1);
     newItems.splice(result.destination.index, 0, reorderedItem);
@@ -92,67 +96,34 @@ export function App() {
     return newItems;
   }
 
-  const moveOriginalToPublic = (droppableSource: any, droppableDestination: any) => {
-    const sourceClone = Array.from(imagesOriginal);
-    const destClone = Array.from(imagesPublic);
+  const moveBetweenLists = (sourceKey: ListKey, destKey: ListKey, droppableSource: DraggableLocation, droppableDestination: DraggableLocation) => {
+    const [sourceList, setSourceList] = listsByKey[sourceKey]
+    const [destList, setDestList] = listsByKey[destKey]
+
+    const sourceClone = Array.from(sourceList);
+    const destClone = Array.from(destList);
     const [removed] = sourceClone.splice(droppableSource.index, 1);
 
     destClone.splice(droppableDestination.index, 0, removed);
 
-    const result = {};
-    setImageOriginal(sourceClone)
-    setImagePublic(destClone)
-
-    return result;
+    setSourceList(sourceClone)
+    setDestList(destClone)
   };
 
-  const movePublicToOriginal = (droppableSource: any, droppableDestination: any) => {
-    const sourceClone = Array.from(imagesOriginal);
-    const destClone = Array.from(imagesPublic);
-    const [removed] = destClone.splice(droppableSource.index, 1);
-
-    sourceClone.splice(droppableDestination.index, 0, removed);
-
-    const result = {};
-    setImageOriginal(sourceClone)
-    setImagePublic(destClone)
-    return result;
-  };
-
-  const onClikOriginal = (index: number) => {
+  const onClickImage = (key: ListKey, index: number) => {
     setPreview(index)
-    setOpenModalOriginal(!openModalOriginal)
+    setPreviewList(key)
   }
 
-  const onClikPublic = (index: number) => {
-    setPreview(index)
-    setOpenModalPublic(!openModalOriginal)
-  }
-
-  const moveArrowOriginal = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const moveArrowPreview = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!previewList) return
+    const [images] = listsByKey[previewList]
     if (event.key == 'ArrowRight') {
-      console.log('ArrowRight', imagesOriginal.length, preview)
-      if (imagesOriginal.length - 1 > preview) {
+      if (images.length - 1 > preview) {
         setPreview(preview + 1)
       }
     }
     if (event.key == 'ArrowLeft') {
-      console.log('ArrowLeft', imagesOriginal.length, preview)
-      if (preview != 0) {
-        setPreview(preview - 1)
-      }
-    }
-  }
-
-  const moveArrowPublic = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key == 'ArrowRight') {
-      console.log('ArrowRight', imagesPublic.length, preview)
-      if (imagesPublic.length - 1 > preview) {
-        setPreview(preview + 1)
-      }
-    }
-    if (event.key == 'ArrowLeft') {
-      console.log('ArrowLeft', imagesPublic.length, preview)
       if (preview != 0) {
         setPreview(preview - 1)
       }
@@ -163,6 +134,8 @@ export function App() {
     setImageOriginal([])
     setImagePublic([...imagesPublic, ...imagesOriginal])
   }
+
+  const previewImages = previewList ? listsByKey[previewList][0] : null
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -178,89 +151,31 @@ export function App() {
       <h3 className='text-1xl text-left text-white'> NUEVAS ENTRADAS </h3>
       <div className='col-span-2'>
         <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="ORIGINAL" direction='horizontal'>
-            {(provided) => (
-              <div className={`flex overflow-x-auto bg-gray-700 ${(imagesOriginal.length == 0 ? 'p-10' : '')}`}
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-              >
-                {
-                  imagesOriginal.map((image, index) => {
-                    return (
-                      <Draggable key={image.description} draggableId={image.description} index={index}>
-                        {(provided) => (
-                          <div
-                            className='flex-shrink-0 p-1'
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <CardImage
-                              image={image}
-                              index={index}
-                              onClick={onClikOriginal}></CardImage>
-                          </div>
-                        )}
-                        {/* <CardImage key={index} image={image}></CardImage> */}
-                      </Draggable>
-                    )
-                  })
-                }
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
+          <ImageColumn
+            droppableId="ORIGINAL"
+            images={imagesOriginal}
+            onClickImage={(index) => onClickImage('ORIGINAL', index)}
+          />
           <h3 className='text-1xl text-left text-white'> PARA PUBLICAR {imagesPublic.length}</h3>
-          <Droppable droppableId="PUBLIC" direction='horizontal'>
-            {(provided) => (
-              <div className={`flex overflow-x-auto bg-gray-700 ${(imagesPublic.length == 0 ? 'p-10' : '')}`}
-                {...provided.droppableProps} ref={provided.innerRef}
-              >
-                {
-                  imagesPublic.map((image, index) => {
-                    return (
-                      <Draggable key={image.description} draggableId={image.description} index={index}>
-                        {(provided) => (
-                          <div
-                            className='flex-shrink-0 p-1'
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <CardImage
-                              image={image}
-                              index={index}
-                              onClick={onClikPublic}></CardImage>
-                          </div>
-                        )}
-
-                      </Draggable>
-                    )
-                  })
-                }
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-          
+          <ImageColumn
+            droppableId="PUBLIC"
+            images={imagesPublic}
+            onClickImage={(index) => onClickImage('PUBLIC', index)}
+          />
+          <h3 className='text-1xl text-left text-white'> ELIMINAR {imagesEliminar.length}</h3>
+          <ImageColumn
+            droppableId="ELIMINAR"
+            images={imagesEliminar}
+            onClickImage={(index) => onClickImage('ELIMINAR', index)}
+          />
         </DragDropContext>
         {
-          openModalOriginal ? (
+          previewList && previewImages ? (
             <PreviewImage
-              moveArrowOriginal={moveArrowOriginal}
-              img={imagesOriginal[preview].data}
-              nameFile={imagesOriginal[preview].file?.name}
-              closedModal={setOpenModalOriginal}
-            ></PreviewImage>
-          ) : (<></>)
-        }
-        {
-          openModalPublic ? (
-            <PreviewImage
-              moveArrowOriginal={moveArrowPublic}
-              img={imagesPublic[preview].data}
-              nameFile={imagesPublic[preview].file?.name}
-              closedModal={setOpenModalPublic}
+              moveArrowOriginal={moveArrowPreview}
+              img={previewImages[preview].data}
+              nameFile={previewImages[preview].file?.name}
+              closedModal={() => setPreviewList(null)}
             ></PreviewImage>
           ) : (<></>)
         }
