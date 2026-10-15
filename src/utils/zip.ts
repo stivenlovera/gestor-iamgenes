@@ -71,22 +71,25 @@ async function exportFileBlob(zip: JSZip, nameFile: string): Promise<void> {
     URL.revokeObjectURL(link.href);
 }
 
-export async function exportFile(files: IImage[], nameFile: string): Promise<void> {
+// Devuelve true si el ZIP se exportó, o false si el usuario canceló el selector
+// de guardado (en ese caso no se debe avisar que la exportación terminó).
+export async function exportFile(files: IImage[], nameFile: string): Promise<boolean> {
     const zip = buildZip(files);
     const showSaveFilePicker = getShowSaveFilePicker();
 
     if (showSaveFilePicker) {
         try {
             await exportFileStreaming(zip, nameFile, showSaveFilePicker);
-            return;
+            return true;
         } catch (err) {
             if (err instanceof DOMException && err.name === 'AbortError') {
                 // El usuario canceló el selector de guardado.
-                return;
+                return false;
             }
             console.error('Falló la exportación en streaming, se reintenta con el método clásico', err);
         }
     }
 
     await exportFileBlob(zip, nameFile);
+    return true;
 }
