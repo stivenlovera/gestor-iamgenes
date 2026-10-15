@@ -136,6 +136,7 @@ export function App() {
   }
 
   const previewImages = previewList ? listsByKey[previewList][0] : null
+  const totalImagenesCargadas = imagesOriginal.length + imagesPublic.length + imagesEliminar.length
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -183,7 +184,7 @@ export function App() {
 
       <div className='col-span-2'>
         <div className='grid grid-cols-5 gap-2'>
-          <h3 className='col-span-2 text-xl text-white p-1'>Total paginas {/* {namePack} Pag: */}{imagesOriginal.length}</h3>
+          <h3 className='col-span-2 text-xl text-white p-1'>Total paginas {totalImagenesCargadas}</h3>
           <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
             type='button'
             onClick={() => {
