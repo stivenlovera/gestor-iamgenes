@@ -166,22 +166,16 @@ export function App() {
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      <h3 className='col-span-2 text-2xl text-center text-white p-1'> {namePack} Pag:{imagesOriginal.length}</h3>
-      <input
+      {/* <h3 className='col-span-2 text-2xl text-center text-white p-1'> {namePack} Pag:{imagesOriginal.length}</h3> */}
+      {/* <input
         className='w-full bg-amber-50 placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow'
         placeholder='nombre de pack'
         onChange={(e) => {
           setNamePack(e.target.value)
         }}
-        type="text" />
-      <input
-        className='w-full bg-amber-50 placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow'
-        type="file"
-        placeholder='agrega imagenes'
-        multiple
-        onChange={onChangeImages}
-      />
-      <h3 className='col-span-2 text-1xl text-left text-white p-2'> ORIGINAL EL PACK </h3>
+        type="text" /> */}
+
+      <h3 className='text-1xl text-left text-white'> NUEVAS ENTRADAS </h3>
       <div className='col-span-2'>
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="ORIGINAL" direction='horizontal'>
@@ -216,17 +210,7 @@ export function App() {
               </div>
             )}
           </Droppable>
-          <div className='col-span-2 text-center p-4'>
-            <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
-              type='button'
-              onClick={() => {
-                moveAll()
-              }}
-            >
-              Mover Todo
-            </button>
-          </div>
-          <h3 className='text-1xl text-left text-white p-2'> PUBLICAR EL PACK {imagesPublic.length}</h3>
+          <h3 className='text-1xl text-left text-white'> PARA PUBLICAR {imagesPublic.length}</h3>
           <Droppable droppableId="PUBLIC" direction='horizontal'>
             {(provided) => (
               <div className={`flex overflow-x-auto bg-gray-700 ${(imagesPublic.length == 0 ? 'p-10' : '')}`}
@@ -258,6 +242,7 @@ export function App() {
               </div>
             )}
           </Droppable>
+          
         </DragDropContext>
         {
           openModalOriginal ? (
@@ -280,22 +265,41 @@ export function App() {
           ) : (<></>)
         }
       </div>
+
       <div className='col-span-2'>
-        <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
-          type='button'
-          onClick={() => {
-            exportFile(imagesPublic, namePack).then((exported) => {
-              if (exported) {
-                alert('Exportación completada')
-              }
-            }).catch((err) => {
-              console.error('Error exportando el pack', err)
-              alert('No se pudo exportar el ZIP: el pack es demasiado grande para procesarlo en el navegador. Probá exportar en un navegador basado en Chromium (permite guardar el zip directo a disco) o exportá el pack en partes más pequeñas.')
-            })
-          }}
-        >
-          Export archivos
-        </button>
+        <div className='grid grid-cols-5 gap-2'>
+          <h3 className='col-span-2 text-xl text-white p-1'>Total paginas {/* {namePack} Pag: */}{imagesOriginal.length}</h3>
+          <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
+            type='button'
+            onClick={() => {
+              exportFile(imagesPublic, namePack).then((exported) => {
+                if (exported) {
+                  alert('Exportación completada')
+                }
+              }).catch((err) => {
+                console.error('Error exportando el pack', err)
+                alert('No se pudo exportar el ZIP: el pack es demasiado grande para procesarlo en el navegador. Probá exportar en un navegador basado en Chromium (permite guardar el zip directo a disco) o exportá el pack en partes más pequeñas.')
+              })
+            }}
+          >
+            Export archivos
+          </button>
+          <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
+            type='button'
+            onClick={() => {
+              moveAll()
+            }}
+          >
+            Mover Todo a publicar
+          </button>
+          <input
+            className='w-full bg-amber-50 placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow'
+            type="file"
+            placeholder='agrega imagenes'
+            multiple
+            onChange={onChangeImages}
+          />
+        </div>
       </div>
     </div>
   )
