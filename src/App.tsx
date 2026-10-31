@@ -18,6 +18,8 @@ export function App() {
   const [imagesEliminar, setImageEliminar] = useState<IImage[]>([])
   const [previewList, setPreviewList] = useState<ListKey | null>(null)
   const [preview, setPreview] = useState<number>(0)
+  // Al exportar: true numera los archivos por su posición; false conserva el nombre original.
+  const [renameFiles, setRenameFiles] = useState<boolean>(true)
 
   // Las tres listas comparten la misma funcionalidad (drag & drop entre ellas,
   // reordenar, previsualizar), así que se accede a cada una por su droppableId
@@ -183,12 +185,12 @@ export function App() {
       </div>
 
       <div className='col-span-2'>
-        <div className='grid grid-cols-5 gap-2'>
+        <div className='grid grid-cols-6 gap-2'>
           <h3 className='col-span-2 text-xl text-white p-1'>Total paginas {totalImagenesCargadas}</h3>
           <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
             type='button'
             onClick={() => {
-              exportFile(imagesPublic, namePack).then((exported) => {
+              exportFile(imagesPublic, namePack, renameFiles).then((exported) => {
                 if (exported) {
                   alert('Exportación completada')
                 }
@@ -200,6 +202,14 @@ export function App() {
           >
             Export archivos
           </button>
+          <label className='flex items-center gap-2 text-white'>
+            <input
+              type='checkbox'
+              checked={renameFiles}
+              onChange={(e) => setRenameFiles(e.target.checked)}
+            />
+            Renombrar con números
+          </label>
           <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
             type='button'
             onClick={() => {
