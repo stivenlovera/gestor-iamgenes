@@ -1,17 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
+import { HELPER_NOT_RUNNING_MESSAGE, openLocalFile, revealLocalFile } from '../../utils/local-helper'
 
 interface PreviewImageProps {
     moveArrowOriginal: (event: React.KeyboardEvent<HTMLInputElement>) => void,
     img: string
     closedModal: (closed: boolean) => void
     nameFile: string | undefined
+    /** Ruta en disco (solo imágenes cargadas con el helper local). */
+    path?: string
+}
+
+const runHelper = (action: () => Promise<void>) => {
+    action().catch((error) => {
+        alert(error instanceof TypeError ? HELPER_NOT_RUNNING_MESSAGE : `Error del helper local: ${(error as Error).message}`)
+    })
 }
 
 const MIN_ZOOM = 1
 const MAX_ZOOM = 8
 const STEP_ZOOM = 0.25
 
-export const PreviewImage = ({ img, nameFile, closedModal, moveArrowOriginal }: PreviewImageProps) => {
+export const PreviewImage = ({ img, nameFile, path, closedModal, moveArrowOriginal }: PreviewImageProps) => {
     const [zoom, setZoom] = useState<number>(1)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
     const [dragging, setDragging] = useState<boolean>(false)
@@ -113,7 +122,17 @@ export const PreviewImage = ({ img, nameFile, closedModal, moveArrowOriginal }: 
                     <button type="button" className="px-2 border border-white rounded disabled:opacity-40"
                         disabled={zoom >= MAX_ZOOM} onClick={() => changeZoom(STEP_ZOOM)}>+</button>
                 </div>
-                <div className="max-w-xl w-full p-1 text-white text-lg text-center">{nameFile}</div>
+                <div className="max-w-xl w-full p-1 text-white text-lg text-center break-all">
+                    {path ? <span className="select-all">{path}</span> : nameFile}
+                </div>
+                {path ? (
+                    <div className="flex justify-center gap-2 p-1">
+                        <button type="button" className="px-2 border border-white rounded text-sm text-white"
+                            onClick={() => runHelper(() => openLocalFile(path))}>Abrir</button>
+                        <button type="button" className="px-2 border border-white rounded text-sm text-white"
+                            onClick={() => runHelper(() => revealLocalFile(path))}>Mostrar en carpeta</button>
+                    </div>
+                ) : null}
             </div>
         </div>
     )

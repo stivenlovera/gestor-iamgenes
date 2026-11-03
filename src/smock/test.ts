@@ -3,6 +3,8 @@ export interface IImage {
     data: string,
     description:string,
     file?:File
+    /** Ruta en disco; solo existe si la imagen se cargó con el helper local (ver utils/local-helper.ts). */
+    path?: string
 }
 export const data: IImage[] = [
     {

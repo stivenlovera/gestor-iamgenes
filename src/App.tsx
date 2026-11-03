@@ -6,6 +6,7 @@ import { ImageColumn } from './components/image-column'
 import { DragDropContext, type DraggableLocation, type DropResult } from '@hello-pangea/dnd';
 import { exportFile } from './utils/zip';
 import { PreviewImage } from './components/modal-preview/modal-preview';
+import { HELPER_NOT_RUNNING_MESSAGE, pickLocalFiles } from './utils/local-helper';
 
 type ListKey = 'ORIGINAL' | 'PUBLIC' | 'ELIMINAR'
 
@@ -47,6 +48,24 @@ export function App() {
       setImageOriginal([...imagesOriginal]);
     } else {
       console.log('error')
+    }
+  }
+
+  // Igual que onChangeImages, pero con el diálogo nativo del helper local, que conserva la ruta en disco.
+  const onPickWithPath = async () => {
+    try {
+      const picked = await pickLocalFiles()
+      const added: IImage[] = picked.map(({ file, path }, index) => ({
+        pagina: index + 1,
+        data: URL.createObjectURL(file),
+        description: uuidv4(),
+        file,
+        path,
+      }))
+      setImageOriginal((current) => [...current, ...added])
+    } catch (error) {
+      // fetch lanza TypeError cuando no hay nada escuchando en el puerto del helper.
+      alert(error instanceof TypeError ? HELPER_NOT_RUNNING_MESSAGE : `Error del helper local: ${(error as Error).message}`)
     }
   }
 
@@ -200,6 +219,13 @@ export function App() {
           multiple
           onChange={onChangeImages}
         />
+        <button className='bg-white hover:bg-blue-500 text-blue-700 text-sm font-semibold hover:text-white py-1 px-3 border border-blue-500 hover:border-transparent rounded'
+          type='button'
+          title='Elige imágenes con el diálogo de Windows y conserva su ruta en disco (requiere el helper local: npm run helper)'
+          onClick={onPickWithPath}
+        >
+          Agregar con ruta
+        </button>
       </div>
       <div className='col-span-2'>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -240,6 +266,7 @@ export function App() {
               moveArrowOriginal={moveArrowPreview}
               img={previewImages[preview].data}
               nameFile={previewImages[preview].file?.name}
+              path={previewImages[preview].path}
               closedModal={() => setPreviewList(null)}
             ></PreviewImage>
           ) : (<></>)
