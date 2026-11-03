@@ -18,6 +18,8 @@ export function App() {
   const [imagesEliminar, setImageEliminar] = useState<IImage[]>([])
   const [previewList, setPreviewList] = useState<ListKey | null>(null)
   const [preview, setPreview] = useState<number>(0)
+  // Imágenes de NUEVAS ENTRADAS marcadas con el check (por IImage.description).
+  const [selectedOriginal, setSelectedOriginal] = useState<Set<string>>(new Set())
   // Al exportar: true numera los archivos por su posición; false conserva el nombre original.
   const [renameFiles, setRenameFiles] = useState<boolean>(true)
 
@@ -137,6 +139,31 @@ export function App() {
     setImagePublic([...imagesPublic, ...imagesOriginal])
   }
 
+  const toggleSelectOriginal = (id: string) => {
+    const next = new Set(selectedOriginal)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    setSelectedOriginal(next)
+  }
+
+  // Elimina de forma permanente imágenes de NUEVAS ENTRADAS (no pasan a DESCARTAR) y libera sus URLs.
+  const deleteFromOriginal = (toDelete: IImage[]) => {
+    if (toDelete.length === 0) return
+    if (!confirm(`¿Eliminar permanentemente ${toDelete.length} imagen(es) de NUEVAS ENTRADAS?`)) return
+    const ids = new Set(toDelete.map((image) => image.description))
+    toDelete.forEach((image) => URL.revokeObjectURL(image.data))
+    setImageOriginal(imagesOriginal.filter((image) => !ids.has(image.description)))
+    setSelectedOriginal(new Set())
+    if (previewList === 'ORIGINAL') {
+      setPreviewList(null)
+    }
+  }
+
+  const selectedOriginalImages = imagesOriginal.filter((image) => selectedOriginal.has(image.description))
+
   const previewImages = previewList ? listsByKey[previewList][0] : null
   const totalImagenesCargadas = imagesOriginal.length + imagesPublic.length + imagesEliminar.length
 
@@ -151,21 +178,56 @@ export function App() {
         }}
         type="text" /> */}
 
-      <h3 className='text-1xl text-left text-white'> NUEVAS ENTRADAS </h3>
+      <div className='col-span-2 flex items-center gap-3'>
+        <h3 className='text-1xl text-left text-white'> NUEVAS ENTRADAS {imagesOriginal.length}</h3>
+        <button className='bg-white hover:bg-red-600 text-red-600 text-sm font-semibold hover:text-white py-1 px-3 border border-red-600 hover:border-transparent rounded disabled:opacity-50 disabled:pointer-events-none'
+          type='button'
+          disabled={imagesOriginal.length === 0}
+          onClick={() => deleteFromOriginal(imagesOriginal)}
+        >
+          Eliminar todo
+        </button>
+        <button className='bg-white hover:bg-red-600 text-red-600 text-sm font-semibold hover:text-white py-1 px-3 border border-red-600 hover:border-transparent rounded disabled:opacity-50 disabled:pointer-events-none'
+          type='button'
+          disabled={selectedOriginalImages.length === 0}
+          onClick={() => deleteFromOriginal(selectedOriginalImages)}
+        >
+          Eliminar seleccionados ({selectedOriginalImages.length})
+        </button>
+        <input
+          className='bg-amber-50 text-slate-700 text-sm py-1 px-3 border border-slate-200 rounded cursor-pointer hover:border-slate-300'
+          type="file"
+          multiple
+          onChange={onChangeImages}
+        />
+      </div>
       <div className='col-span-2'>
         <DragDropContext onDragEnd={onDragEnd}>
           <ImageColumn
             droppableId="ORIGINAL"
             images={imagesOriginal}
             onClickImage={(index) => onClickImage('ORIGINAL', index)}
+            selectedIds={selectedOriginal}
+            onToggleSelect={toggleSelectOriginal}
           />
-          <h3 className='text-1xl text-left text-white'> PARA PUBLICAR {imagesPublic.length}</h3>
+          <div className='flex items-center gap-3'>
+            <h3 className='text-1xl text-left text-white'> PARA PUBLICAR {imagesPublic.length}</h3>
+            <button className='bg-white hover:bg-blue-500 text-blue-700 text-sm font-semibold hover:text-white py-1 px-3 border border-blue-500 hover:border-transparent rounded disabled:opacity-50 disabled:pointer-events-none'
+              type='button'
+              disabled={imagesOriginal.length === 0}
+              onClick={() => {
+                moveAll()
+              }}
+            >
+              Mover todo a publicar
+            </button>
+          </div>
           <ImageColumn
             droppableId="PUBLIC"
             images={imagesPublic}
             onClickImage={(index) => onClickImage('PUBLIC', index)}
           />
-          <h3 className='text-1xl text-left text-white'> ELIMINAR {imagesEliminar.length}</h3>
+          <h3 className='text-1xl text-left text-white'> DESCARTAR {imagesEliminar.length}</h3>
           <ImageColumn
             droppableId="ELIMINAR"
             images={imagesEliminar}
@@ -185,9 +247,9 @@ export function App() {
       </div>
 
       <div className='col-span-2'>
-        <div className='grid grid-cols-6 gap-2'>
-          <h3 className='col-span-2 text-xl text-white p-1'>Total paginas {totalImagenesCargadas}</h3>
-          <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
+        <div className='flex items-center gap-3'>
+          <h3 className='text-xl text-white p-1'>Total paginas {totalImagenesCargadas}</h3>
+          <button className='bg-white hover:bg-blue-500 text-blue-700 text-sm font-semibold hover:text-white py-1 px-3 border border-blue-500 hover:border-transparent rounded'
             type='button'
             onClick={() => {
               exportFile(imagesPublic, namePack, renameFiles).then((exported) => {
@@ -210,21 +272,6 @@ export function App() {
             />
             Renombrar con números
           </label>
-          <button className='bg-white hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded'
-            type='button'
-            onClick={() => {
-              moveAll()
-            }}
-          >
-            Mover Todo a publicar
-          </button>
-          <input
-            className='w-full bg-amber-50 placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow'
-            type="file"
-            placeholder='agrega imagenes'
-            multiple
-            onChange={onChangeImages}
-          />
         </div>
       </div>
     </div>

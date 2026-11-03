@@ -6,11 +6,14 @@ interface ImageColumnProps {
     droppableId: string
     images: IImage[]
     onClickImage: (index: number) => void
+    /** Ids (IImage.description) marcados; si se pasa junto a onToggleSelect, cada tarjeta muestra un check. */
+    selectedIds?: Set<string>
+    onToggleSelect?: (id: string) => void
 }
 
 // Columna reutilizable de imágenes con drag & drop; la usan las listas ORIGINAL,
 // PUBLIC y ELIMINAR, que todas comparten el mismo comportamiento.
-export const ImageColumn = ({ droppableId, images, onClickImage }: ImageColumnProps) => {
+export const ImageColumn = ({ droppableId, images, onClickImage, selectedIds, onToggleSelect }: ImageColumnProps) => {
     return (
         <Droppable droppableId={droppableId} direction='horizontal'>
             {(provided) => (
@@ -32,6 +35,8 @@ export const ImageColumn = ({ droppableId, images, onClickImage }: ImageColumnPr
                                             <CardImage
                                                 image={image}
                                                 index={index}
+                                                selected={selectedIds?.has(image.description)}
+                                                onToggleSelect={onToggleSelect ? () => onToggleSelect(image.description) : undefined}
                                                 onClick={onClickImage}></CardImage>
                                         </div>
                                     )}
