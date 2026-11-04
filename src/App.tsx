@@ -7,6 +7,7 @@ import { DragDropContext, type DraggableLocation, type DropResult } from '@hello
 import { exportFile } from './utils/zip';
 import { PreviewImage } from './components/modal-preview/modal-preview';
 import { HELPER_NOT_RUNNING_MESSAGE, pickLocalFiles } from './utils/local-helper';
+import { ModalReminder } from './components/modal-reminder';
 
 type ListKey = 'ORIGINAL' | 'PUBLIC' | 'ELIMINAR'
 
@@ -23,6 +24,7 @@ export function App() {
   const [selectedOriginal, setSelectedOriginal] = useState<Set<string>>(new Set())
   // Al exportar: true numera los archivos por su posición; false conserva el nombre original.
   const [renameFiles, setRenameFiles] = useState<boolean>(true)
+  const [showReminder, setShowReminder] = useState<boolean>(false)
 
   // Las tres listas comparten la misma funcionalidad (drag & drop entre ellas,
   // reordenar, previsualizar), así que se accede a cada una por su droppableId
@@ -184,7 +186,6 @@ export function App() {
   const selectedOriginalImages = imagesOriginal.filter((image) => selectedOriginal.has(image.description))
 
   const previewImages = previewList ? listsByKey[previewList][0] : null
-  const totalImagenesCargadas = imagesOriginal.length + imagesPublic.length + imagesEliminar.length
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -226,6 +227,13 @@ export function App() {
         >
           Agregar con ruta
         </button>
+        <button className='ml-auto bg-white hover:bg-blue-500 text-blue-700 text-sm font-semibold hover:text-white py-1 px-3 border border-blue-500 hover:border-transparent rounded'
+          type='button'
+          onClick={() => setShowReminder(true)}
+        >
+          Recordatorio
+        </button>
+        {showReminder ? <ModalReminder onClose={() => setShowReminder(false)} /> : null}
       </div>
       <div className='col-span-2'>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -275,7 +283,6 @@ export function App() {
 
       <div className='col-span-2'>
         <div className='flex items-center gap-3'>
-          <h3 className='text-xl text-white p-1'>Total paginas {totalImagenesCargadas}</h3>
           <button className='bg-white hover:bg-blue-500 text-blue-700 text-sm font-semibold hover:text-white py-1 px-3 border border-blue-500 hover:border-transparent rounded'
             type='button'
             onClick={() => {
