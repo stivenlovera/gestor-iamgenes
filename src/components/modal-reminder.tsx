@@ -8,6 +8,8 @@ interface ModalReminderProps {
 const TERMS: { en: string, es: string }[] = [
     { en: 'from above', es: 'desde arriba' },
     { en: 'from below', es: 'desde abajo' },
+    { en: 'view from above', es: 'vista desde arriba' },
+    { en: 'view from below', es: 'vista desde abajo' },
     { en: 'low angle', es: 'ángulo bajo' },
     { en: 'high angle', es: 'ángulo alto' },
     { en: 'long angle', es: 'ángulo amplio' },
